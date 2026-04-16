@@ -27,6 +27,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import com.example.unscramble.data.WordRepository
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 
 /**
  * ViewModel containing the app data and methods to process the data
@@ -43,9 +47,20 @@ class GameViewModel : ViewModel() {
     // Set of words used in the game
     private var usedWords: MutableSet<String> = mutableSetOf()
     private lateinit var currentWord: String
+    private lateinit var repository: WordRepository
+    private var extraWords: List<String> = emptyList()
 
     init {
         resetGame()
+    }
+    fun setRepository(repo: WordRepository) {
+        repository = repo
+
+        viewModelScope.launch {
+            repository.allWords.collect { dbWords ->
+                extraWords = dbWords.map { it.word }
+            }
+        }
     }
 
     /*
@@ -131,7 +146,8 @@ class GameViewModel : ViewModel() {
 
     private fun pickRandomWordAndShuffle(): String {
         // Continue picking up a new random word until you get one that hasn't been used before
-        currentWord = allWords.random()
+        val combined = allWords + extraWords
+        currentWord = combined.random()
         return if (usedWords.contains(currentWord)) {
             pickRandomWordAndShuffle()
         } else {
@@ -139,4 +155,12 @@ class GameViewModel : ViewModel() {
             shuffleCurrentWord(currentWord)
         }
     }
+    fun addNewWord(word: String) {
+        if (word.isNotBlank()) {
+            viewModelScope.launch {
+                repository.insertWord(word)
+            }
+        }
+    }
+
 }

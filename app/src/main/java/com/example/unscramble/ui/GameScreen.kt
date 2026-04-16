@@ -57,12 +57,20 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.unscramble.R
 import com.example.unscramble.ui.theme.UnscrambleTheme
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.example.unscramble.data.AppDatabase
+import com.example.unscramble.data.WordRepository
 
 @Composable
 fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
     val gameUiState by gameViewModel.uiState.collectAsState()
     val mediumPadding = dimensionResource(R.dimen.padding_medium)
-
+    val context = LocalContext.current
+    val db = AppDatabase.getDatabase(context)
+    val repository = WordRepository(db.wordDao())
+    gameViewModel.setRepository(repository)
     Column(
         modifier = Modifier
             .statusBarsPadding()
@@ -89,6 +97,7 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                 .wrapContentHeight()
                 .padding(mediumPadding)
         )
+        var inputKata by remember { mutableStateOf("") }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -115,6 +124,23 @@ fun GameScreen(gameViewModel: GameViewModel = viewModel()) {
                     text = stringResource(R.string.skip),
                     fontSize = 16.sp
                 )
+            }
+
+            OutlinedTextField(
+                value = inputKata,
+                onValueChange = { inputKata = it },
+                label = { Text("Tambah Kata Baru") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    gameViewModel.addNewWord(inputKata)
+                    inputKata = ""
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Simpan Kata")
             }
         }
 
